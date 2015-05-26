@@ -1,6 +1,6 @@
 CPP = g++
 
-NVCC = /usr/local/cuda-6.5/bin/nvcc
+NVCC = /usr/local/cuda/bin/nvcc
 
 SOURCEDIR = .
 
@@ -23,7 +23,7 @@ LINK_OBJS = $(SOURCEDIR)/accl_cu_dlink.o
 all: accl
 
 accl: accl_cu_dlink.o
-	$(CPP) -o $(EXE) $(DEVICE_OBJS) $(LINK_OBJS) $(CPP_SOURCES) -L/usr/local/cuda-6.5/lib64 -lcudart -lcuda -lcudadevrt -lpthread -fopenmp
+	$(CPP) -o $(EXE) $(DEVICE_OBJS) $(LINK_OBJS) $(CPP_SOURCES) -L/usr/local/cuda/lib64 -lcudart -lcudadevrt -lpthread -fopenmp
 
 accl_cu_dlink.o: accl_cu.o
 	$(NVCC) $(NVCCFLAGS) $(ARCH) -Xcompiler '-fPIC' -dlink $(DEVICE_OBJS) -o $(LINK_OBJS) -lcudadevrt

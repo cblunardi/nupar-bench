@@ -1,33 +1,33 @@
 # Check CUDA Version
 CUDA60_DIR = /usr/local/cuda-6.0
-CUDA65_DIR = /usr/local/cuda-6.5
+CUDA70_DIR = /usr/local/cuda-7.0
 
 CUDA60 = 0
-CUDA65 = 0
+CUDA70 = 0
 ifneq "$(wildcard $(CUDA60_DIR) )" ""
   CUDA60 = 1
 endif
 
-ifneq "$(wildcard $(CUDA65_DIR) )" ""
-  CUDA65 = 1
+ifneq "$(wildcard $(CUDA70_DIR) )" ""
+  CUDA70 = 1
 endif
 
 CUDA_DIR =
 
 ifeq ($(CUDA60), 1)
-  ifeq ($(CUDA65),1)
+  ifeq ($(CUDA70),1)
     # use higher version
-    CUDA_DIR = $(CUDA65_DIR)
+    CUDA_DIR = $(CUDA70_DIR)
   else
-  	# use 60 when no 65
+  	# use 60 when no 70
     CUDA_DIR = $(CUDA60_DIR)
   endif
 else
-  ifeq ($(CUDA65),1)
-	# use 65
-    CUDA_DIR = $(CUDA65_DIR)
+  ifeq ($(CUDA70),1)
+	# use 70
+    CUDA_DIR = $(CUDA70_DIR)
   else
-    # error msg: no cuda 60 and 65
+    # error msg: no cuda 60 and 70
     $(error CUDA Version >= 6.0 is required for Benchmark Suites!)
   endif
 endif
