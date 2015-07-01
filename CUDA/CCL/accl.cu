@@ -181,8 +181,8 @@ __global__ void mergeSpansKernel(int *components, int *spans, const int rows, co
     }
 }
 
-void acclCuda(int *out, int *components, const int *in, const uint nFrames,
-                 const int rows, const int cols)
+void acclCuda(int *out, int *components, const int *in, uint nFrames,
+                 uint nFramsPerStream, const int rows, const int cols)
 {
     int *devIn = 0;
     int *devComponents = 0;
@@ -205,7 +205,6 @@ void acclCuda(int *out, int *components, const int *in, const uint nFrames,
     const int frameRows = rows/nFrames;
 
     /*Streams Information*/    
-    uint nFramsPerStream = 2;
     uint nStreams = nFrames/nFramsPerStream;
     int rowsOccupancyMax = frameRows * nFramsPerStream;
     cudaErrChk(cudaOccupancyMaxPotentialBlockSize( &minGridSize, &blockSize,

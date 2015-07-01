@@ -412,7 +412,6 @@ __global__ void evolveContour(unsigned char* intensity, unsigned char* labels, s
         {
                 stopCondition[tid] = 0;
                 numIterations++;
-
                 dimGrid.x = WIDTH/30+1;
                 dimGrid.y = HEIGHT/30+1;
  
@@ -614,7 +613,7 @@ __global__ void checkStopCondition(signed char* speed, signed char* phi, int par
 
 	// Falsify stop condition if criteria are not met
 	if(phiReg == 1 && speedReg > 0)
-		stopCondition[parentThreadID]++;
+		stopCondition[parentThreadID]=0;
 	else if(phiReg == -1 && speedReg < 0)
-		stopCondition[parentThreadID]++;
+		stopCondition[parentThreadID]=1;
 }

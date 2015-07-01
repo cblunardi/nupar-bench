@@ -1,5 +1,18 @@
-Para executar:
-./level_set_segmentation --image sample.intensities.pgm --labels sample.labels.pgm --params sample.params
+The level set segmentation program tests the HyperQ and Dynamic Parallelism
 
-O que não funciona: o benchmark parece até executar corretamente, porém não chega nunca ao fim (a GPU permanece em 100% por mais de 1h30m e nenhuma saída ocorre no terminal). Ocorre que o kernel é executado porém não chega nunca ao fim, o código não tem saídas na tela por causa de sua implementação, somente saídas de erro e de término de execução. Imagino que o kernel nunca termina por um problema com um dos arquivos de input de exemplo, o sample.labels.pgm, que é uma imagem completamente vazia, e não sei se é o que o kernel espera.
--> A modificação do uso da tecnologia HyperQ pelo benchmark é possível atravéz do parâmetro de entrada --reps N, onde N é o número de kernels que serão instanciados simultaneamente.
+To test HyperQ:
+1. Run the application with --rep <num> (with num <= 32).
+
+To increase child kernels:
+1. Edit the samples.labels file
+2. Each new label adds a new parent thread and effectively increases the child kernels launched. The number of child kernels launched depends on the image data and the label intensity.
+
+How to add labels to sample.labels file:
+
+4	<-- Label id
+10	<-- Intensity range start
+80	<-- Intensity range end
+
+Number of lines in samples.labels file should be multiple of 3, following the above given tuple.
+
+

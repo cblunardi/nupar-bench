@@ -347,12 +347,17 @@ image<int> *imageUcharToInt(image<uchar> *input)
     return output;
 }
 
-int main()
+int main(int argc, char** argv)
 {
+    if(argc < 4)
+    {
+	cout<<"Usage: ./accl <path to input image> <numFrames in image> <Frames perstream>" << endl;
+	exit(0);
+    }
     cout<<"Accelerated Connected Component Labeling" << endl;
     cout<<"========================================" << endl;
     cout<<"Loading input image..." << endl;
-    image<uchar> *input = loadPGM("Data/8Frames.pgm");
+    image<uchar> *input = loadPGM(argv[1]);
     const int width = input->width();
     const int height = input->height();
 
@@ -364,7 +369,14 @@ int main()
     image<rgb> *output2 = new image<rgb>(width, height);
     imInt = imageUcharToInt(input);
 
-    const uint nFrames= 8;
+    
+    uint nFrames= atoi(argv[2]); 
+    uint nFramsPerStream = atoi(argv[3]);
+    if (nFrames < nFramsPerStream) 
+    {
+	cout<<"Num Frames per stream should be less than or equal to numFrames in image"<< endl;
+	exit(0);
+    }
     const int rows = nFrames*512;
     const int cols = 512;
     const int imageSize = rows*cols;
@@ -389,7 +401,7 @@ int main()
     /*
      * CUDA
      */
-    acclCuda(spans, components, image, nFrames, rows, cols);
+    acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols);
 
     /*
      * Print output image
@@ -429,6 +441,6 @@ int main()
     /*---------------- SERIAL --------------------*/
     int *spansSerial= new int[spansSize];
     acclSerial(image, spansSerial, components, rows, cols, output1);
-    printf("Segmentation ended.\n");
+    printf("Image Segmentation ended.\n");
     return 0;
 }
