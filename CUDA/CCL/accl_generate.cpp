@@ -283,7 +283,7 @@ int main(int argc, char** argv)
 		exit(0);
 	}
 	fwrite(spans, spansSize*sizeof(int), 1, fout);
-	fwrite(spans, componentsSize*sizeof(int), 1, fout);
+	fwrite(components, componentsSize*sizeof(int), 1, fout);
 
 	fclose(fout);
 	cout << "Gold written to file." << endl;

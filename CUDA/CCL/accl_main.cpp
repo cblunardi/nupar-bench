@@ -309,12 +309,13 @@ int main(int argc, char** argv)
 		/*
 		 * CUDA
 		 */
-		double ktime = mysecond();
+		double ktime=0.0;
 		start_iteration();
-		acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols);
+		ktime = acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols);
 		end_iteration();
-		ktime = mysecond() - ktime;
-		printf("acclCuda time: %.5f", ktime);
+		//printf("acclCuda time: %.5f", ktime);
+		
+		ktime /= 1000;
 		
 		// output validation
 		int kernel_errors = 0;
@@ -325,6 +326,7 @@ int main(int argc, char** argv)
 			{
 				char error_detail[150];
 				snprintf(error_detail, 150, "t: [spans], p: [%d], r: %d, e: %d", k, spans[k], gold_spans[k]);
+				printf("%s\n", error_detail);
 				log_error_detail(error_detail);
 				kernel_errors++;
 			}
@@ -337,6 +339,7 @@ int main(int argc, char** argv)
 			{
 				char error_detail[150];
 				snprintf(error_detail, 150, "t: [components], p: [%d], r: %d, e: %d", k, components[k], gold_components[k]);
+				printf("%s\n", error_detail);
 				log_error_detail(error_detail);
 				kernel_errors++;
 			}

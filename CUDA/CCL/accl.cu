@@ -181,7 +181,7 @@ __global__ void mergeSpansKernel(int *components, int *spans, const int rows, co
     }
 }
 
-void acclCuda(int *out, int *components, const int *in, uint nFrames,
+double acclCuda(int *out, int *components, const int *in, uint nFrames,
                  uint nFramsPerStream, const int rows, const int cols)
 {
     int *devIn = 0;
@@ -278,7 +278,7 @@ void acclCuda(int *out, int *components, const int *in, uint nFrames,
     cudaEventSynchronize(stop);
 
     cudaEventElapsedTime(&time, start, stop);
-    printf ("Time kernel execution: %f ms\n", time);
+    //printf ("Time kernel execution: %f ms\n", time);
 
     /* Analysis of occupancy*/
     int maxActiveBlocks;
@@ -303,4 +303,6 @@ void acclCuda(int *out, int *components, const int *in, uint nFrames,
     cudaFree(devOut);
     cudaFree(devIn);
     cudaFree(devComponents);
+
+    return time;
 }
