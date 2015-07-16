@@ -58,6 +58,8 @@
 #define MAX_LABELS 262144
 #define BUF_SIZE 256
 
+#include "log_helper.h"
+
 class errorHandler { };
 using namespace std;
 /*
@@ -106,142 +108,6 @@ double getWallTime()
 double getCpuTime()
 {
     return (double)clock() / CLOCKS_PER_SEC;
-}
-
-/*
- * acclSerial: ACCL computes CCL using sequential implementation
- * Parameters:
- * - imInt:         int*
- *                  Image matrix with integer values per pixel
- * - spans:         int*
- *                  Spans matrix stores the intermediate values of spans per row
- *                  using two elements per span (start position, end position)
- * - components:    int*
- *                  Components matrix stores labels per span
- * - rows:          const int
- *                  number of rows in the original image
- * - cols:          const int
- *                  number of columns in the original image
- * - output:        image<rgb>
- *                  image output with the respective color segment assigned to each pixel
- */
-void acclSerial(int *imInt, int *spans, int *components, const int rows,
-                const int cols, image<rgb> *output)
-{
-    const int width = cols;
-    const int height = rows;
-    const int rowsSpans = rows;
-    const int colsSpans = ((cols+2-1)/2)*2; //ceil(cols/2)*2
-    const int spansSize = colsSpans*rowsSpans;
-    const int componentsSize = (colsSpans/2)*rowsSpans;        
-    int colsComponents = colsSpans/2;
-    memset(spans, -1, spansSize*sizeof(int));
-    memset(components, -1, componentsSize*sizeof(int));
-
-    /*
-     * Find Spans
-     */
-    double wall0 = getWallTime();
-    double cpu0  = getCpuTime();
-    for(int i=0; i<rows-1; i++)
-    {
-        int current =-1;
-        bool flagFirst = true;
-        int indexOut = 0;
-        int indexComp = 0;
-        int comp = i*colsComponents;
-        for (int j = 0; j < cols; j++)
-        {
-            if(flagFirst && imInt[i*cols+j]> 0)
-            {
-                current = imInt[i*cols+j];
-                spans[i*colsSpans+indexOut] = j;
-                indexOut++;
-                flagFirst = false;
-            }
-            if (!flagFirst && imInt[i*cols+j] != current)
-            {
-                spans[i*colsSpans+indexOut] = j-1;
-                indexOut++;
-                flagFirst = true;                
-                components[i*colsComponents+indexComp] = comp;  /*Add respective label*/
-                indexComp++;
-                comp++;
-            }
-        }
-        if (!flagFirst)
-        {
-            spans[i*colsSpans+indexOut] = cols - 1;
-            /*Add the respective label*/
-            components[i*colsComponents+indexComp] = comp;
-        }
-    }
-
-    /*
-     * Merge Spans
-     */
-    int label = -1;
-    int startX, endX, newStartX, newEndX;
-    for (int i = 0; i < rowsSpans-1; i++) /*compute until penultimate row, since we need the below row to compare*/
-    {
-        for (int j=0; j < colsSpans-1 && spans[i*colsSpans+j] >=0; j=j+2) /*verify if there is a Span available*/
-        {
-            startX = spans[i*colsSpans+j];
-            endX = spans[i*colsSpans+j+1];
-            int newI = i+1; /*line below*/
-            for (int k=0; k<colsSpans-1 && spans[newI*colsSpans+k] >=0; k=k+2) /*verify if there is a New Span available*/
-            {
-                newStartX = spans[newI*colsSpans+k];
-                newEndX = spans[newI*colsSpans+k+1];
-                if (startX <= newEndX && endX >= newStartX) /*Merge components*/
-                {
-                    label = components[i*(colsSpans/2)+(j/2)];          /*choose the startSpan label*/
-                    for (int p=0; p<=i+1; p++)                          /*relabel*/
-                    {
-                        for(int q=0; q<colsSpans/2; q++)
-                        {
-                            if(components[p*(colsSpans/2)+q]==components[newI*(colsSpans/2)+(k/2)])
-                            {
-                                components[p*(colsSpans/2)+q] = label;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    double wall1 = getWallTime();
-    double cpu1  = getCpuTime();
-    cout << "Time Performance: ACCL serial" << endl;
-    cout << "\tWall Time = " << (wall1 - wall0)*1000 << " ms" << endl;
-    cout << "\tCPU Time  = " << (cpu1  - cpu0)*1000  << " ms" << endl;
-
-    /*
-     * Convert to a labeled image matrix
-     */
-    rgb *colors = new rgb[width*height];
-    
-    for (int index = 0; index < width*height; index++)
-        colors[index] = randomRgb();
-    
-    for(int i=0; i<rowsSpans; i++)
-    {
-        for(int j=0; j<colsSpans ; j=j+2)
-        {
-            startX = spans[i*colsSpans+j];
-            if(startX>=0)
-            {
-                endX = spans[i*colsSpans+j+1];
-                for(int k=startX; k <=endX; k++)
-                {
-                    imRef(output, k, i)= colors[components[i*(colsSpans/2)+(j/2)]];
-                }
-            }
-        }
-    }
-    savePGM(output, "Data/out1.pgm");
-    delete [] colors;
 }
 
 /*
@@ -347,19 +213,50 @@ image<int> *imageUcharToInt(image<uchar> *input)
     return output;
 }
 
+
+double mysecond()
+{
+   struct timeval tp;
+   struct timezone tzp;
+   int i = gettimeofday(&tp,&tzp);
+   return ( (double) tp.tv_sec + (double) tp.tv_usec * 1.e-6 );
+}
+
+void readGold(int *gold_spans, int *gold_components, int spansSize, int componentsSize, const char *fpath)
+{
+	FILE *fgold;
+	fgold = fopen(fpath, "rb");
+	if (!fgold)
+	{
+		cout << "Could not open gold output." << endl;
+		exit(0);
+	}
+	// Caio: output format: SPANSCOMPONENTS
+	fread(gold_spans, spansSize*sizeof(int), 1, fgold);
+	fread(gold_components, componentsSize*sizeof(int), 1, fgold);
+	fclose(fgold);
+}
+
+void usage()
+{
+	cout<<"Usage: ./accl <N frames in the image> <(HyperQ) Frames per Stream> <Input image path> <GOLD path> <#iteractions>" << endl;
+}
+
 int main(int argc, char** argv)
 {
-    if(argc < 4)
+    if(argc < 6)
     {
-	cout<<"Usage: ./accl <path to input image> <numFrames in image> <Frames perstream>" << endl;
-	exit(0);
+		usage();
+		exit(0);
     }
     cout<<"Accelerated Connected Component Labeling" << endl;
     cout<<"========================================" << endl;
     cout<<"Loading input image..." << endl;
-    image<uchar> *input = loadPGM(argv[1]);
+    image<uchar> *input = loadPGM(argv[3]);
     const int width = input->width();
     const int height = input->height();
+
+	int iterations = atoi(argv[5]);
 
     /*
      * Declaration of Variables
@@ -370,8 +267,8 @@ int main(int argc, char** argv)
     imInt = imageUcharToInt(input);
 
     
-    uint nFrames= atoi(argv[2]); 
-    uint nFramsPerStream = atoi(argv[3]);
+    uint nFrames= atoi(argv[1]); 
+    uint nFramsPerStream = atoi(argv[2]);
     if (nFrames < nFramsPerStream) 
     {
 	cout<<"Num Frames per stream should be less than or equal to numFrames in image"<< endl;
@@ -391,56 +288,69 @@ int main(int argc, char** argv)
     const int componentsSize = (colsSpans/2)*rows;
     int *spans= new int[spansSize];
     int *components = new int[componentsSize];
+	int *gold_spans= new int[spansSize];
+    int *gold_components = new int[componentsSize];
 
-    /*
-     * Initialize
-     */
-    memset(spans, -1, spansSize*sizeof(int));
-    memset(components, -1, componentsSize*sizeof(int));
+	readGold(gold_spans, gold_components, spansSize, componentsSize, argv[4]);
 
-    /*
-     * CUDA
-     */
-    acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols);
+	char test_info[90];
+	snprintf(test_info, 90, "frames:%d, framesPerStream:%d", nFrames, nFramsPerStream);
+	start_log_file("cudaCCL", test_info);
 
-    /*
-     * Print output image
-     */
-    rgb *colors = new rgb[width*height];
-    int startX, endX;
-    for (int index = 0; index < rows*cols; index++)
-        colors[index] = randomRgb();
+	for (int loop1 = 0; loop1 < iterations; loop1++)
+	{
 
-    for(int i=0; i<rows; i++)
-    {
-        for(int j=0; j<colsSpans; j=j+2)
-        {
-            startX = spans[i*colsSpans+j];
-            if(startX>=0)
-            {
-                endX = spans[i*colsSpans+j+1];
-                for(int k=startX; k <=endX; k++)
-                {
-                        if (components[i*(colsSpans/2)+(j/2)] != -1)
-                        {
-                            imRef(output2, k, i)= colors[components[i*(colsSpans/2)+(j/2)]];
-                        }
-                        else
-                            printf("Error some spans weren't labeled\n");
-                }
-            }
-        }
-    }
+		/*
+		 * Initialize
+		 */
+		memset(spans, -1, spansSize*sizeof(int));
+		memset(components, -1, componentsSize*sizeof(int));
 
-    /*
-     * Free memory
-     */
-    delete [] colors;
-    savePGM(output2, "Data/out2.pgm");
+		/*
+		 * CUDA
+		 */
+		double ktime = mysecond();
+		start_iteration();
+		acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols);
+		end_iteration();
+		ktime = mysecond() - ktime;
+		printf("acclCuda time: %.5f", ktime);
+		
+		// output validation
+		int kernel_errors = 0;
+		#pragma omp parallel for
+		for (int k=0; k<spansSize; k++)
+		{
+			if (spans[k] != gold_spans[k])
+			{
+				char error_detail[150];
+				snprintf(error_detail, 150, "t: [spans], p: [%d], r: %d, e: %d", k, spans[k], gold_spans[k]);
+				log_error_detail(error_detail);
+				kernel_errors++;
+			}
+		}
+		// output validation
+		#pragma omp parallel for
+		for (int k=0; k<componentsSize; k++)
+		{
+			if (components[k] != gold_components[k])
+			{
+				char error_detail[150];
+				snprintf(error_detail, 150, "t: [components], p: [%d], r: %d, e: %d", k, components[k], gold_components[k]);
+				log_error_detail(error_detail);
+				kernel_errors++;
+			}
+		}
+		log_error_count(kernel_errors);
 
-    /*---------------- SERIAL --------------------*/
-    int *spansSerial= new int[spansSize];
-    acclSerial(image, spansSerial, components, rows, cols, output1);
+		printf(".");
+		if (!loop1%10)
+			printf("\nTest number: %d\nTest time:%.5f\n", loop1, ktime);
+	}
+
+	end_log_file();
+    
+
     printf("Image Segmentation ended.\n");
     return 0;
 }

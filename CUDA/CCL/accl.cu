@@ -209,11 +209,11 @@ void acclCuda(int *out, int *components, const int *in, uint nFrames,
     int rowsOccupancyMax = frameRows * nFramsPerStream;
     cudaErrChk(cudaOccupancyMaxPotentialBlockSize( &minGridSize, &blockSize,
                                         findSpansKernel, 0, rowsOccupancyMax));
-    printf("Best Kernel Size\n");
-    printf("-----------------\n");
-    printf("\t Minimum gridSize to acchieve high occupancy: %d\n", minGridSize);
-    printf("\t Block Size: %d\n", blockSize);
-    printf("\t Rows Max Occupancy: %d\n", rowsOccupancyMax);
+   // printf("Best Kernel Size\n");
+   // printf("-----------------\n");
+   // printf("\t Minimum gridSize to acchieve high occupancy: %d\n", minGridSize);
+   // printf("\t Block Size: %d\n", blockSize);
+   // printf("\t Rows Max Occupancy: %d\n", rowsOccupancyMax);
 
     cudaEvent_t start, stop;
     float time;
@@ -252,8 +252,8 @@ void acclCuda(int *out, int *components, const int *in, uint nFrames,
     //gridSize = rows/blockSize;
 
     /* Launch a kernel on the GPU with one thread for each element*/
-    printf("Number of frames processed: %d\n", nFrames);
-    printf("Number of streams created: %d\n", nStreams);
+   // printf("Number of frames processed: %d\n", nFrames);
+   // printf("Number of streams created: %d\n", nStreams);
     cudaEventRecord(start, 0);      /*measure time*/
     for(int i=0; i<nStreams; ++i)
     {
@@ -293,11 +293,11 @@ void acclCuda(int *out, int *components, const int *in, uint nFrames,
                       (float)(props.maxThreadsPerMultiProcessor /
                               props.warpSize);
 
-    printf("Occupancy Results\n");
-    printf("-----------------\n");
-    printf("\t Block Size: %d\n", blockSize);
-    printf("\t Grid Size: %d\n", gridSize);
-    printf("\t Theoretical occupancy: %f\n", occupancy);
+   // printf("Occupancy Results\n");
+   // printf("-----------------\n");
+   // printf("\t Block Size: %d\n", blockSize);
+   // printf("\t Grid Size: %d\n", gridSize);
+   // printf("\t Theoretical occupancy: %f\n", occupancy);
 
     /*Free*/
     cudaFree(devOut);

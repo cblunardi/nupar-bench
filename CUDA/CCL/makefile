@@ -1,12 +1,14 @@
 CPP = g++
 
-NVCC = /usr/local/cuda-7.0/bin/nvcc
+NVCC = /usr/local/cuda/bin/nvcc
 
 SOURCEDIR = .
 
 
 CPP_SOURCES = $(SOURCEDIR)/accl_main.cpp
 CU_SOURCES = $(SOURCEDIR)/accl.cu
+
+LOGHELPER_DIR = ../../include
 
 CFLAGS = 
 
@@ -20,18 +22,22 @@ DEVICE_OBJS = $(SOURCEDIR)/accl_cu.o
 
 LINK_OBJS = $(SOURCEDIR)/accl_cu_dlink.o
 
-all: accl
+all: accl accl_generate
 
-accl: accl_cu_dlink.o
-	$(CPP) -o $(EXE) $(DEVICE_OBJS) $(LINK_OBJS) $(CPP_SOURCES) -L/usr/local/cuda/lib64 -lcudart -lcuda -lcudadevrt -lpthread -fopenmp
+accl: accl_cu_dlink.o $(CPP_SOURCES)
+	$(CPP) -o $(EXE) -I$(LOGHELPER_DIR) $(DEVICE_OBJS) $(LINK_OBJS) $(CPP_SOURCES) -L/usr/local/cuda/lib64 -L$(LOGHELPER_DIR) -lcudart -lcuda -lcudadevrt -lpthread -lLogHelper -fopenmp
+
+accl_generate: accl_cu_dlink.o accl_generate.cpp
+	$(CPP) -o accl_generate $(DEVICE_OBJS) $(LINK_OBJS) accl_generate.cpp -L/usr/local/cuda/lib64 -lcudart -lcuda -lcudadevrt -lpthread -fopenmp
 
 accl_cu_dlink.o: accl_cu.o
 	$(NVCC) $(NVCCFLAGS) $(ARCH) -Xcompiler '-fPIC' -dlink $(DEVICE_OBJS) -o $(LINK_OBJS) -lcudadevrt
 
-accl_cu.o: 
+accl_cu.o: $(CU_SOURCES)
 	$(NVCC) $(NVCCFLAGS) $(ARCH) -Xcompiler '-fPIC' -dc -m64 $(CU_SOURCES) -o $(DEVICE_OBJS)
 
 clean:
 	rm -f $(DEVICE_OBJS) 
 	rm -f $(LINK_OBJS) 
-	rm -f $(EXE)
+	rm -f $(EXE) accl_generate
+
