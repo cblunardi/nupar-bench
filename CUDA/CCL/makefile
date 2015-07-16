@@ -25,7 +25,7 @@ LINK_OBJS = $(SOURCEDIR)/accl_cu_dlink.o
 all: accl accl_generate
 
 accl: accl_cu_dlink.o $(CPP_SOURCES)
-	$(CPP) -o $(EXE) -I$(LOGHELPER_DIR) $(DEVICE_OBJS) $(LINK_OBJS) $(CPP_SOURCES) -L/usr/local/cuda/lib64 -L$(LOGHELPER_DIR) -lcudart -lcuda -lcudadevrt -lpthread -lLogHelper -fopenmp
+	$(CPP) -o $(EXE) ../../include/log_helper.c $(DEVICE_OBJS) $(LINK_OBJS) $(CPP_SOURCES) -I$(LOGHELPER_DIR) -L/usr/local/cuda/lib64 -lcudart -lcuda -lcudadevrt -lpthread -fopenmp
 
 accl_generate: accl_cu_dlink.o accl_generate.cpp
 	$(CPP) -o accl_generate $(DEVICE_OBJS) $(LINK_OBJS) accl_generate.cpp -L/usr/local/cuda/lib64 -lcudart -lcuda -lcudadevrt -lpthread -fopenmp

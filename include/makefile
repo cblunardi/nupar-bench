@@ -7,7 +7,7 @@ all: log_helper.c
 
 cuda: log_helper.c
 	rm -f log_helper.o
-	nvcc -c log_helper.c
+	nvcc -c log_helper.cu
 	ar cvr libLogHelperCuda.a log_helper.o
 
 clean:
