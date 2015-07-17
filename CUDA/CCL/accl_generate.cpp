@@ -270,7 +270,7 @@ int main(int argc, char** argv)
     /*
      * CUDA
      */
-    acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols);
+    acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols, 0);
 
     printf("Image Segmentation ended.\n");
 

@@ -310,9 +310,7 @@ int main(int argc, char** argv)
 		 * CUDA
 		 */
 		double ktime=0.0;
-		start_iteration();
-		ktime = acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols);
-		end_iteration();
+		ktime = acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols, 1);
 		//printf("acclCuda time: %.5f", ktime);
 		
 		ktime /= 1000;

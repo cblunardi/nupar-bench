@@ -42,6 +42,7 @@
  */
 #include <stdio.h>
 #include <math.h>
+#include "log_helper.h"
 
 #define THREADSX 16
 #define THREADSY 16
@@ -182,7 +183,7 @@ __global__ void mergeSpansKernel(int *components, int *spans, const int rows, co
 }
 
 double acclCuda(int *out, int *components, const int *in, uint nFrames,
-                 uint nFramsPerStream, const int rows, const int cols)
+                 uint nFramsPerStream, const int rows, const int cols, int logs_active)
 {
     int *devIn = 0;
     int *devComponents = 0;
@@ -255,6 +256,7 @@ double acclCuda(int *out, int *components, const int *in, uint nFrames,
    // printf("Number of frames processed: %d\n", nFrames);
    // printf("Number of streams created: %d\n", nStreams);
     cudaEventRecord(start, 0);      /*measure time*/
+	if (logs_active) start_iteration();
     for(int i=0; i<nStreams; ++i)
     {
         findSpansKernel<<<gridSize, blockSize>>>(&devOut[i*frameSpansSize],
@@ -268,6 +270,8 @@ double acclCuda(int *out, int *components, const int *in, uint nFrames,
                                                  cols,
                                                  frameRows);
     }
+	cudaDeviceSynchronize();
+	if (logs_active) end_iteration();
     /* Copy device to host*/
     cudaErrChk(cudaMemcpy(components, devComponents, sizeComponents * sizeof(int),
                           cudaMemcpyDeviceToHost));
