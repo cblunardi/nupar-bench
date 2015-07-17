@@ -31,116 +31,24 @@ __global__ void switchOut(signed char* speed, signed char* phi, int HEIGHT, int 
 __global__ void checkStopCondition(signed char* speed, signed char* phi, int parentThreadID, int HEIGHT, int WIDTH);
 __device__ volatile int stopCondition[1024];
 
+void usage()
+{
+	cout<<"Usage: ./lss <Input intensities path> <Input labels path> <Input params path> <GOLD output path> <#repetitions (HyperQ)>" << endl;
+}
 
 int main(int argc, char* argv[])
 {
 	// Parse command line arguments
-	char* imageFile = NULL;
-	char* labelFile = NULL;
-	char* paramFile = NULL;
-	int numRepetitions = 1;
-	bool produceOutput = false;
-
-	for(int i=1; i<argc; i++)
-	{
-		if(strcmp(argv[i], "--image") == 0)
-		{
-			if(i+1 < argc)
-				imageFile = argv[++i];
-			else
-			{
-				cerr << "Expected a filename after '" << argv[i] << "'. Try '" << argv[0]
-					<< " --help' for additional information." << endl;
-				exit(1);
-			}
-		}
-		else if(strcmp(argv[i], "--labels") == 0)
-		{
-			if(i+1 < argc)
-				labelFile = argv[++i];
-			else
-			{
-				cerr << "Expected a filename after '" << argv[i] << "'. Try '" << argv[0]
-					<< " --help' for additional information." << endl;
-				exit(1);
-			}
-		}
-		else if(strcmp(argv[i], "--params") == 0)
-		{
-			if(i+1 < argc)
-				paramFile = argv[++i];
-			else
-			{
-				cerr << "Expected a filename after '" << argv[i] << "'. Try '" << argv[0]
-					<< " --help' for additional information." << endl;
-				exit(1);
-			}
-		}
-		else if(strcmp(argv[i], "--reps") == 0)
-		{
-			if(i+1 < argc)
-			{
-				numRepetitions = atoi(argv[++i]);
-				if(numRepetitions < 1)
-				{
-					cerr << "Number of repetitions must be greater than 0." << endl;
-					exit(1);
-				}
-			}
-			else
-			{
-				cerr << "Expected a filename after '" << argv[i] << "'. Try '" << argv[0]
-					<< " --help' for additional information." << endl;
-				exit(1);
-			}
-		}
-		else if(strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0)
-			produceOutput = true;
-		else if(strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
-		{
-			cout << "Usage: " << argv[0] << " [OPTIONS] --image <file> --labels <file> --params <file>" << endl;
-			cout << "The order of switches does not matter so long as each one is immediately followed by its appropriate" << endl;
-			cout << "argument (if one is required).\n" << endl;
-
-			cout << "Utilizes a massively parallelized level set algorithm to segment the desired region of interest in" << endl;
-			cout << "a grayscale image based on a given intensity range. Developed by Brett Daley as part of the NUPAR" << endl;
-			cout << "benchmark suite.\n" << endl;
-
-			cout << "Required arguments:" << endl;
-			cout << "      --image <file>    Grayscale image to be segmented (intensities must be between 0 and 255)." << endl;
-			cout << "      --labels <file>   Stripe-Based Connected Components Labeling output file. Used to seed the" << endl;
-			cout << "                        initial contour." << endl;
-			cout << "      --params <file>   Text file requiring the following format:" << endl;
-			cout << "                           <Target label>" << endl;
-			cout << "                           <Lower intensity bound>" << endl;
-			cout << "                           <Upper intensity bound>" << endl;
-			cout << "                           ..." << endl;
-			cout << "                        Having multiple sets of three lines will segment the image multiple times according" << endl;
-			cout << "                        to the different parameters. Utilizes dynamic parallelism." << endl;
-			cout << "Options:" << endl;
-			cout << "      --reps <number>   Run the program the specified number of times, enabling concurrent kernel execution" << endl;
-			cout << "                        via Hyper-Q. Useful for performance benchmarking. [Default: 1]" << endl;
-			cout << "  -o, --output          Output an RGB image for each target label specified in the params file. Use MATLAB's" << endl;
-			cout << "                        'imshow' command to view." << endl;
-			cout << "  -h, --help            Display this information and exit." << endl;
-
-			exit(0);
-		}
-		else
-		{
-			cerr << "Did not recognize '" << argv[i] << "'. Try '" << argv[0]
-				<< " --help' for additional information." << endl;
-			exit(1);
-		}
-	}
-	
-	if(imageFile == NULL || labelFile == NULL || paramFile == NULL)
-	{
-		cerr << "Missing one or more arguments. Try '" << argv[0]
-			<< " --help' for additional information." << endl;
-		exit(1);
-	}
-
+	if(argc < 6)
+    {
+		usage();
+		exit(0);
+    }
+	char* imageFile = argv[1];
+	char* labelFile = argv[2];
+	char* paramFile = argv[3];
+	char* outputFile = argv[4];
+	int numRepetitions = atoi(argv[5]);
 
         // Initialize timers, start the runtime timer
 	cudaEvent_t startTime1, startTime2, stopTime1, stopTime2;
@@ -270,28 +178,17 @@ int main(int argc, char* argv[])
 	cudaEventRecord(stopTime1, 0);
 
 
-	// Output RGB images (if command line switch was present)
-	if(produceOutput == true)
+	// Caio: Output: DEV
+	FILE *fout;
+	fout = fopen(outputFile, "wb");
+	if (!fout)
 	{
-		srand(time(NULL));
-		Color colors[HEIGHT*WIDTH];
-		for(int i=0; i<HEIGHT; i++)
-			for(int j=0; j<WIDTH; j++)
-				colors[i*WIDTH+j] = randomColor();
-
-		for(int k=0; k<numLabels; k++)
-		{
-			image<Color> output = image<Color>(WIDTH, HEIGHT, true);
-			image<Color>* im = &output;
-			for(int i=0; i<HEIGHT; i++)
-				for(int j=0; j<WIDTH; j++)
-					im->access[i][j] = colors[phi[k*HEIGHT*WIDTH+i*WIDTH+j]];
-			
-			char filename[64];
-			sprintf(filename, "segmented.target_label-%d.intensities-%d-%d.ppm", targetLabels[k], lowerIntensityBounds[k], upperIntensityBounds[k]);
-			savePPM(im, filename);
-		}
+		printf("Could not open output file. %s\n", outputFile);
+		exit(0);
 	}
+	fwrite(phi, numRepetitions*numLabels*SIZE, 1, fout);
+	fclose(fout);
+	printf("GOLD written to file.\n");
 
 
         // Stop runtime timer and print times
