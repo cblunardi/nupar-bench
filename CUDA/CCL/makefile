@@ -10,11 +10,11 @@ CU_SOURCES = $(SOURCEDIR)/accl.cu
 
 LOGHELPER_DIR = ../../include
 
-CFLAGS = 
+CFLAGS =
 
-NVCCFLAGS = -pg 
+NVCCFLAGS = -pg
 
-ARCH = -gencode arch=compute_35,code=sm_35 
+ARCH = -gencode arch=compute_35,code=sm_35
 
 EXE = $(SOURCEDIR)/accl
 
@@ -37,7 +37,6 @@ accl_cu.o: $(CU_SOURCES)
 	$(NVCC) $(NVCCFLAGS) $(ARCH) -Xcompiler '-fPIC' -dc -m64 $(CU_SOURCES) -I$(LOGHELPER_DIR) -o $(DEVICE_OBJS)
 
 clean:
-	rm -f $(DEVICE_OBJS) 
-	rm -f $(LINK_OBJS) 
+	rm -f $(DEVICE_OBJS)
+	rm -f $(LINK_OBJS)
 	rm -f $(EXE) accl_generate
-

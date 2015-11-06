@@ -266,10 +266,10 @@ int main(int argc, char** argv)
     image<rgb> *output2 = new image<rgb>(width, height);
     imInt = imageUcharToInt(input);
 
-    
-    uint nFrames= atoi(argv[1]); 
+
+    uint nFrames= atoi(argv[1]);
     uint nFramsPerStream = atoi(argv[2]);
-    if (nFrames < nFramsPerStream) 
+    if (nFrames < nFramsPerStream)
     {
 	cout<<"Num Frames per stream should be less than or equal to numFrames in image"<< endl;
 	exit(0);
@@ -312,15 +312,16 @@ int main(int argc, char** argv)
 		double ktime=0.0;
 		ktime = acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols, 1);
 		//printf("acclCuda time: %.5f", ktime);
-		
+
 		ktime /= 1000;
-		
+
 		// output validation
 		int kernel_errors = 0;
 		#pragma omp parallel for
 		for (int k=0; k<spansSize; k++)
 		{
 			if (spans[k] != gold_spans[k])
+            #pragma omp critical
 			{
 				char error_detail[150];
 				snprintf(error_detail, 150, "t: [spans], p: [%d], r: %d, e: %d", k, spans[k], gold_spans[k]);
@@ -334,6 +335,7 @@ int main(int argc, char** argv)
 		for (int k=0; k<componentsSize; k++)
 		{
 			if (components[k] != gold_components[k])
+            #pragma omp critical
 			{
 				char error_detail[150];
 				snprintf(error_detail, 150, "t: [components], p: [%d], r: %d, e: %d", k, components[k], gold_components[k]);
@@ -344,13 +346,11 @@ int main(int argc, char** argv)
 		}
 		log_error_count(kernel_errors);
 
-		printf(".");
-		if (!loop1%10)
-			printf("\nTest number: %d\nTest time:%.5f\n", loop1, ktime);
+		printf("."); fflush(stdout);
 	}
 
 	end_log_file();
-    
+
 
     printf("Image Segmentation ended.\n");
     return 0;
