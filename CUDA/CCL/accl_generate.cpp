@@ -86,6 +86,15 @@ rgb randomRgb()
     return c;
 }
 
+
+double mysecond()
+{
+   struct timeval tp;
+   struct timezone tzp;
+   int i = gettimeofday(&tp,&tzp);
+   return ( (double) tp.tv_sec + (double) tp.tv_usec * 1.e-6 );
+}
+
 /*
  * getWallTime: Compute timing of execution including I/O
  */
@@ -270,7 +279,9 @@ int main(int argc, char** argv)
     /*
      * CUDA
      */
-    acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols, 0);
+	double ktime=0.0;
+	ktime = acclCuda(spans, components, image, nFrames, nFramsPerStream, rows, cols, 0);
+printf("acclCuda time: %.5f", ktime);
 
     printf("Image Segmentation ended.\n");
 
@@ -284,6 +295,7 @@ int main(int argc, char** argv)
 	}
 	fwrite(spans, spansSize*sizeof(int), 1, fout);
 	fwrite(components, componentsSize*sizeof(int), 1, fout);
+
 
 	fclose(fout);
 	cout << "Gold written to file." << endl;
